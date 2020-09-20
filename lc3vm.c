@@ -79,6 +79,15 @@ enum
 };
 
 /**
+ * Memory mapped registers
+ */
+enum
+{
+	MR_KBSR = 0xFE00,	/* Keyboard status */
+	MR_KBDR = 0xFE02	/* keyboard data */
+};
+
+/**
  * Set of available trap codes
  */
 enum
@@ -153,6 +162,70 @@ int read_image(const char* image_path)
 	return 1;
 }
 
+uint16_t check_key()
+{
+	fd_set readfds;
+	FD_ZERO(&readfds);
+	FD_SET(STDIN_FILENO, &readfds);
+
+	struct timeval timeout;
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 0;
+	return select(1, &readfds, NULL, NULL, &timeout) != 0;
+}
+
+/**
+ * Procedure to write value into the memory
+ */
+void mem_write(uint16_t address, uint16_t val)
+{
+	memory[address] = val;
+}
+
+/**
+ * Procedure to read value from memory and return it
+ */
+uint16_t mem_read(uint16_t address)
+{
+	if (address == MR_KBSR)
+	{
+		if (check_key())
+		{
+			memory[MR_KBSR] = (1 << 15);
+			memory[MR_KBDR] = getchar();
+		}
+		else
+		{
+			memory[MR_KBSR] = 0;
+		}
+	}
+
+	return memory[address];
+}
+
+/* Input buffering */
+struct termios original_tio;
+
+void disable_input_buffering()
+{
+	tcgetattr(STDIN_FILENO, &original_tio);
+	struct termios new_tio = original_tio;
+	new_tio.c_cflag &= ~ICANON & ~ECHO;
+	tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+}
+
+void restore_input_buffering()
+{
+	tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
+}
+
+void handle_interrupt(int signal)
+{
+	restore_input_buffering();
+	printf("\n");
+	exit(-2);
+}
+
 int main(int argc, const char* argv[])
 {
 	/**
@@ -169,7 +242,7 @@ int main(int argc, const char* argv[])
 
 	for (int j = 0; j < argc; ++j)
 	{
-		if (!read_image[argv[j]])
+		if (!read_image(argv[j]))
 		{
 			printf("Failed to load image: %s\n", argv[j]);
 			exit(1);
@@ -180,7 +253,8 @@ int main(int argc, const char* argv[])
 	/**
 	 * Initial setup code
 	 */
-	// Yet to implement
+	signal(SIGINT, handle_interrupt);
+	disable_input_buffering();
 
 
 	/**
@@ -438,4 +512,5 @@ int main(int argc, const char* argv[])
 	/**
 	 * Perform shutdown operation
 	 */
+	restore_input_buffering();
 }
