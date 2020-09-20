@@ -78,3 +78,147 @@ enum
 	FL_NEG = 1 << 2		/* N */
 };
 
+int main(int argc, const char* argv[])
+{
+	/**
+	 * Load arguments
+	 */
+	if (argc < 2)
+	{
+		/**
+		 * Prompt correct usage
+		 */
+		printf("lc3 [image-file1] ...\n");
+		exit(2);
+	}
+
+	for (int j = 0; j < argc; ++j)
+	{
+		if (!read_image[argv[j]])
+		{
+			printf("Failed to load image: %s\n", argv[j]);
+			exit(1);
+		}
+	}
+
+
+	/**
+	 * Initial setup code
+	 */
+	// Yet to implement
+
+
+	/**
+	 * Initialize PC to the starting position
+	 * Default is 0x3000
+	 */
+	enum { PC_START = 0x3000 };
+	REGISTER[R_PC] = PC_START;
+
+	/**
+	 * Flag to check for the running status
+	 */
+	int running = 1;
+
+	while (running)
+	{
+		/**
+		 * Fetch the current instruction and the opcode
+		 */
+		uint16_t INSTR = mem_read(REGISTER[R_PC]++);
+		uint16_t OP = INSTR >> 12;
+
+		switch (OP)
+		{
+			case OP_ADD:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_AND:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_NOT:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_BR:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_JMP:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_JSR:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_LD:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_LDI:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_LDR:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_LEA:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_ST:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_STI:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_STR:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_TRAP:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_RES:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			case OP_RTI:
+				/**
+				 * Operation yet to implement
+				 */
+				break;
+			default:
+				/**
+				 * Throw error for bad opcode
+				 */
+				break;
+		}
+	}
+
+	/**
+	 * Perform shutdown operation
+	 */
+}
