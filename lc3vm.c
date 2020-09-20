@@ -78,6 +78,35 @@ enum
 	FL_NEG = 1 << 2		/* N */
 };
 
+/**
+ * Applying the necessary padding to the number
+ * For negative sign the padding of 1 should be applied for maintaining the 2's complement
+ */
+uint16_t sign_extend(uint16_t x, int bit_count)
+{
+	if ((x >> (bit_count - 1)) & 1)
+	{
+		x |= (0xFFFF << bit_count);
+	}
+	return x;
+}
+
+void update_flags(uint16_t r) {
+	if (REGISTER[r] == 0)
+	{
+		REGISTER[R_COND] = FL_ZRO;
+	}
+	else if (REGISTER[r] >> 15) /* If the value has the leftmost bit set, indicating it is negative */
+	{
+		REGISTER[R_COND] = FL_NEG;
+	}
+	else
+	{
+		REGISTER[R_COND] = FL_POS;
+	}
+
+}
+
 int main(int argc, const char* argv[])
 {
 	/**
@@ -131,69 +160,165 @@ int main(int argc, const char* argv[])
 		switch (OP)
 		{
 			case OP_ADD:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					/* Destination Register */
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					/* First operand */
+					uint16_t r1 = (INSTR >> 6) & 0x7;
+					/* Flag to check if current operation is in immediate mode */
+					uint16_t IMM_FLAG = (INSTR >> 5) & 0x1;
+
+					if (IMM_FLAG)
+					{
+						uint16_t imm_5 = sign_extend(INSTR & 0x1F, 5);
+						REGISTER[r0] = REGISTER[r1] + imm_5;
+					}
+					else
+					{
+						uint16_t R2 = INSTR & 0x7;
+						REGISTER[r0] = REGISTER[r1] + REGISTER[R2];
+					}
+
+					update_flags(r0);
+				}
+
 				break;
 			case OP_AND:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					/* Destination Register */
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					/* First operand */
+					uint16_t r1 = (INSTR >> 6) & 0x7;
+					/* Flag to check if current operation is in immediate mode */
+					uint16_t IMM_FLAG = (INSTR >> 5) & 0x1;
+
+					if (IMM_FLAG)
+					{
+						uint16_t imm_5 = sign_extend(INSTR & 0x1F, 5);
+						REGISTER[r0] = REGISTER[r1] & imm_5;
+					}
+					else
+					{
+						uint16_t r2 = INSTR & 0x7;
+						REGISTER[r0] = REGISTER[r1] & REGISTER[r2];
+					}
+					update_flags(r0);
+				}
+
 				break;
 			case OP_NOT:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					/* Destination Register */
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					/* Operand */
+					uint16_t r1 = (INSTR >> 6) & 0x7;
+
+					REGISTER[r0] = ~REGISTER[r1];
+					update_flags(r0);
+				}
+
 				break;
 			case OP_BR:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					uint16_t pc_offset = sign_extend(INSTR & 0x1FF, 9);
+					uint16_t cond_flag = (INSTR >> 9) & 0x7;
+
+					if (cond_flag & REGISTER[R_COND])
+					{
+						REGISTER[R_PC] += pc_offset;
+					}
+				}
+
 				break;
 			case OP_JMP:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					uint16_t r1 = (INSTR >> 6) & 0x7;
+					REGISTER[R_PC] = REGISTER[r1];
+				}
+
 				break;
 			case OP_JSR:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					uint16_t long_flag = (INSTR >> 11) & 1;
+					REGISTER[R_R7] = REGISTER[R_PC];
+					if (long_flag)
+					{
+						uint16_t long_pc_offset = sign_extend(INSTR & 0x7FF, 11);
+						REGISTER[R_PC] += long_pc_offset;
+					}
+					else
+					{
+						uint16_t r1 = (INSTR >> 6) & 0x7;
+						REGISTER[R_PC] = REGISTER[r1];
+					}
+					break;
+				}
+
 				break;
 			case OP_LD:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					uint16_t pc_offset = sign_extend(INSTR & 0x1FF, 9);
+					REGISTER[r0] = mem_read(REGISTER[R_PC] + pc_offset);
+					update_flags(r0);
+				}
 				break;
 			case OP_LDI:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					/* Destination register */
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					/* PC offset */
+					uint16_t pc_offset = sign_extend(INSTR & 0x1FF, 9);
+					/* Add offset to the current PC, and look at the final memory address obtained */
+					REGISTER[r0] = mem_read(mem_read(REGISTER[R_PC] + pc_offset));
+					update_flags(r0);
+				}
+
 				break;
 			case OP_LDR:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					uint16_t r1 = (INSTR >> 6) & 0x7;
+					uint16_t offset = sign_extend(INSTR & 0x3F, 6);
+					REGISTER[r0] = mem_read(REGISTER[r1] + offset);
+					update_flags(r0);
+				}
+
 				break;
 			case OP_LEA:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					uint16_t pc_offset = sign_extend(INSTR & 0x1FF, 9);
+					REGISTER[r0] = REGISTER[R_PC] + pc_offset;
+					update_flags(r0);
+				}
+
 				break;
 			case OP_ST:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					uint16_t pc_offset = sign_extend(INSTR & 0x1FF, 9);
+					mem_write(REGISTER[R_PC] + pc_offset, REGISTER[r0]);
+				}
+
 				break;
 			case OP_STI:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					uint16_t r1 = (INSTR >> 6) & 0x7;
+					uint16_t offset = sign_extend(INSTR & 0x3F, 6);
+					mem_write(REGISTER[r1] + offset, REGISTER[r0]);
+				}
+
 				break;
 			case OP_STR:
-				/**
-				 * Operation yet to implement
-				 */
+				{
+					uint16_t r0 = (INSTR >> 9) & 0x7;
+					uint16_t r1 = (INSTR >> 6) & 0x7;
+					uint16_t offset = sign_extend(INSTR & 0x3F, 6);
+					mem_write(REGISTER[r1] + offset, REGISTER[r0]);
+				}
+
 				break;
 			case OP_TRAP:
 				/**
@@ -201,19 +326,10 @@ int main(int argc, const char* argv[])
 				 */
 				break;
 			case OP_RES:
-				/**
-				 * Operation yet to implement
-				 */
-				break;
 			case OP_RTI:
-				/**
-				 * Operation yet to implement
-				 */
-				break;
 			default:
-				/**
-				 * Throw error for bad opcode
-				 */
+				/* Throw error for bad opcode */
+				abort();
 				break;
 		}
 	}
