@@ -210,7 +210,7 @@ void disable_input_buffering()
 {
 	tcgetattr(STDIN_FILENO, &original_tio);
 	struct termios new_tio = original_tio;
-	new_tio.c_cflag &= ~ICANON & ~ECHO;
+	new_tio.c_lflag &= ~ICANON & ~ECHO;
 	tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
 }
 
